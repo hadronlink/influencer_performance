@@ -2,10 +2,15 @@ from flask import Flask, render_template, jsonify, redirect, url_for, session, r
 import csv
 from functools import wraps
 from datetime import datetime, timedelta 
-from werkzeug.urls import url_quote
+from werkzeug.urls import url_quote 
+from google.cloud import bigquery
+import os
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
+
+# Set the environment variable for the service account key
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "service-account-key.json"
 
 @app.route('/influencer_performance')
 def dashboard():
@@ -29,23 +34,26 @@ def new_template():
     return render_template('influencer_dashboard.html')
 
 def validate_login(influencer_code, password):
-    print(influencer_code, password)
-    if (influencer_code == 'wallace25' and password == '123') or influencer_code == 'zaza' and password == '123':
+    client = bigquery.Client()
+    query = """
+        SELECT * FROM `hadronlink-61c5d.support.influencer_credentials`
+        WHERE username = @username AND password = @password
+    """
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("username", "STRING", influencer_code),
+            bigquery.ScalarQueryParameter("password", "STRING", password),
+        ]
+    )
+    query_job = client.query(query, job_config=job_config)
+    results = query_job.result()
+
+    if results.total_rows > 0:
         session['authenticated'] = True
         session['influencer_code'] = influencer_code
         return True
     return False
 
-#@app.route('/login', methods=['POST'])
-#def login():
-#   influencer_code = request.form['influencer-code']
-#   password = request.form['password']
-#   if validate_login(influencer_code, password):
-#        return redirect(f'/{influencer_code}')
-#   else:
-#       flash('Invalid influencer code or password')
-#       return redirect(f'/?error=1')
-    
 @app.route('/login', methods=['POST'])
 def login():
     influencer_code = request.form['influencer-code']
@@ -63,11 +71,20 @@ def logout():
 
 @app.route('/api/data')
 def get_data():
-    data = []
-    with open('campaing.csv', newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            data.append(row)
+    client = bigquery.Client()
+    query = """
+        SELECT * FROM `hadronlink-61c5d.product.influencer_performance`
+    """
+    query_job = client.query(query)
+    results = query_job.result()
+
+    data = [dict(row) for row in results]
+    
+    # Convert date objects to strings
+    for row in data:
+        row['date'] = row['date'].strftime('%Y-%m-%d')
+    
+    #print(data)
     return jsonify(data)
 
 if __name__ == "__main__":
