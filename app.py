@@ -18,7 +18,7 @@ def dashboard():
     if not session.get('authenticated'):        
         return redirect(url_for('new_template'))
     print('wallace')
-    return render_template('influencer_performance.html')
+    return render_template('influencer_performance.html') 
 
 @app.route('/influencer_performance/<influencer_code>')
 def influencer_performance(influencer_code):

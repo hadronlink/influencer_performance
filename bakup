@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"> 
+    <meta name="viewport"="width=device-width, initial-scale=1.0">
     <title>Influencer Performance Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
@@ -188,7 +188,7 @@
         }
         .post-content {
             font-size: 1rem;
-            color: var(--text);
+            color: var (--text);
         }
         .timeline {
             position: relative;
@@ -231,7 +231,7 @@
         }
         .timeline-item .post-details {
             font-size: 0.875rem;
-            color: var(--text-light);
+            color: var (--text-light);
         }
 
         .tabs {
@@ -283,11 +283,11 @@
                 <div class="filter-controls">
                     <div class="filter-group">
                         <label for="start-date">Start Date</label>
-                        <input type="date" id="start-date" name="start-date">
+                        <input type="date" id="start-date" name="start-date" value="{{ start_date }}">
                     </div>
                     <div class="filter-group">
                         <label for="end-date">End Date</label>
-                        <input type="date" id="end-date" name="end-date">
+                        <input type="date" id="end-date" name="end-date" value="{{ end_date }}">
                     </div>
                     <button id="apply-filter">Apply Filter</button>
                 </div>
@@ -320,7 +320,7 @@
 
             <div class="posts">
                 <div class="card-header">
-                    <h2 class="card-title">Posts Created</h2>
+                    <!--<h2 class="card-title">Posts Created</h2>-->
                 </div>
                 <ul id="posts-list" class="timeline"></ul>
             </div>
@@ -333,6 +333,12 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            const influencer_code = "{{ influencer_code }}"; // Add this line 
+
+            // Set End Date to today
+            const today = new Date();
+            document.getElementById('end-date').value = today.toISOString().split('T')[0];
+
             // Initialize variables
             let csvData = [];
             let filteredData = [];
@@ -355,12 +361,12 @@
             
             // Initialize date filters
             function initializeDateFilters(data) {
-                const dates = data.map(row => row.date);
-                const startDate = dates[0];
-                const endDate = dates[dates.length - 1];
+                const today = new Date();
+                const sevenDaysAgo = new Date(today);
+                sevenDaysAgo.setDate(today.getDate() - 7);
                 
-                document.getElementById('start-date').value = startDate;
-                document.getElementById('end-date').value = endDate;
+                document.getElementById('start-date').value = sevenDaysAgo.toISOString().split('T')[0];
+                document.getElementById('end-date').value = today.toISOString().split('T')[0];
             }
             
             // Filter data by date range
@@ -373,7 +379,7 @@
             
             // Update metrics
             function updateMetrics(data) {
-                const wallaceTotal = data.reduce((sum, row) => sum + (parseInt(row.new_users_WALLACE25) || 0), 0);
+                const wallaceTotal = data.reduce((sum, row) => sum + (parseInt(row[`new_users_${influencer_code}`]) || 0), 0);
                 const totalNewUsers = data.reduce((sum, row) => sum + (parseInt(row.total_new_users) || 0), 0);
                 const conversionRate = totalNewUsers > 0 ? (wallaceTotal / totalNewUsers * 100).toFixed(1) : '0';
                 
@@ -388,9 +394,8 @@
                 
                 // Prepare chart data
                 const labels = data.map(row => row.date);
-                const wallaceData = data.map(row => row.new_users_WALLACE25 || 0);
-                const totalNewUsersData = data.map(row => row.total_new_users || 0);
-                const postData = data.map(row => row.post_WALLACE25 ? 'Post' : '');
+                const wallaceData = data.map(row => row[`new_users_${influencer_code}`] || 0);
+                const postData = data.map(row => row[`post_${influencer_code}`] ? 'Post' : '');
 
                 // Destroy existing chart if it exists
                 if (trendChart) {
@@ -404,19 +409,10 @@
                         labels: labels,
                         datasets: [
                             {
-                                label: 'WALLACE25 Users',
+                                label: `${influencer_code} Users`,
                                 data: wallaceData,
                                 borderColor: '#6366f1',
                                 backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                                borderWidth: 2,
-                                fill: true,
-                                tension: 0.4
-                            },
-                            {
-                                label: 'Total New Users',
-                                data: totalNewUsersData,
-                                borderColor: '#10b981',
-                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
                                 borderWidth: 2,
                                 fill: true,
                                 tension: 0.4
@@ -468,14 +464,14 @@
                 const postsList = document.getElementById('posts-list');
                 postsList.innerHTML = '';
                 data.forEach(row => {
-                    if (row.post_WALLACE25) {
+                    if (row[`post_${influencer_code}`]) {
                         const postCard = document.createElement('li');
                         postCard.className = 'timeline-item';
                         postCard.innerHTML = `
                             <div class="post-date">${row.date} ${new Date(row.date).toLocaleTimeString()}</div>
                             <div class="post-details">${new Date(row.date).toLocaleDateString('en-US', { weekday: 'long' })}</div>
                             <div class="post-details">Event Type: Post/Reels</div>
-                            <div class="post-content">${row.post_WALLACE25}</div>
+                            <div class="post-content">${row[`post_${influencer_code}`]}</div>
                         `;
                         postsList.appendChild(postCard);
                     }
@@ -526,7 +522,10 @@
             }
             
             // Start the application
-            loadData();
+            loadData().then(() => {
+                // Force apply filter action after data is loaded
+                document.getElementById('apply-filter').click();
+            });
 
             // Tab functionality
             const tabs = document.querySelectorAll('.tab');

@@ -188,7 +188,7 @@
         }
         .post-content {
             font-size: 1rem;
-            color: var(--text);
+            color: var (--text);
         }
         .timeline {
             position: relative;
@@ -395,7 +395,6 @@
                 // Prepare chart data
                 const labels = data.map(row => row.date);
                 const wallaceData = data.map(row => row[`new_users_${influencer_code}`] || 0);
-                const totalNewUsersData = data.map(row => row.total_new_users || 0);
                 const postData = data.map(row => row[`post_${influencer_code}`] ? 'Post' : '');
 
                 // Destroy existing chart if it exists
@@ -414,15 +413,6 @@
                                 data: wallaceData,
                                 borderColor: '#6366f1',
                                 backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                                borderWidth: 2,
-                                fill: true,
-                                tension: 0.4
-                            },
-                            {
-                                label: 'Total New Users',
-                                data: totalNewUsersData,
-                                borderColor: '#10b981',
-                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
                                 borderWidth: 2,
                                 fill: true,
                                 tension: 0.4
